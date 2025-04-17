@@ -237,9 +237,9 @@ class GachaCog(commands.Cog):
             )
 
         @app_commands.command(name="creategachathread", description="専用ガチャスレッドを作成します")
-    async def create_gacha_thread(self, interaction: discord.Interaction):
-        if interaction.channel.name != "gacha-channel":
-            await interaction.response.send_message(
+        async def create_gacha_thread(self, interaction: discord.Interaction):
+            if interaction.channel.name != "gacha-channel":
+                await interaction.response.send_message(
                 "このコマンドは専用のガチャチャンネルでのみ使用できます。",
                 ephemeral=True
             )

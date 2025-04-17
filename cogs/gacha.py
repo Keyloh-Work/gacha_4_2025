@@ -25,7 +25,7 @@ class PaginatorView(discord.ui.View):
         end_idx = start_idx + self.per_page
         page_content = []
         for item in self.data[start_idx:end_idx]:
-            card_no = item["No."]
+            card_no = item["no"]
             title = item["title"]
             chname = item.get("chname", "")
             url = item.get("url", "")
@@ -81,7 +81,7 @@ class ChnamePaginatorView(discord.ui.View):
         chname, items = self.grouped_data[self.current_index]
         lines = []
         for item in items:
-            card_no = item["No."]
+            card_no = item["no"]
             title = item["title"]
             url = item.get("url", "")
             if card_no in self.collected_cards:

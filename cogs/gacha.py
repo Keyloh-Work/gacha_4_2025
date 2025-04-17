@@ -242,24 +242,31 @@ class GachaCog(commands.Cog):
             await interaction.response.send_message("このコマンドは専用のガチャチャンネルでのみ使用できます。", ephemeral=True)
             return
 
-        existing_thread = discord.utils.get(interaction.channel.threads, name=f'gacha-thread-{interaction.user.name}')
-        if existing_thread:
+        existing = discord.utils.get(interaction.channel.threads,
+                                     name=f'gacha-thread-{interaction.user.name}')
+        if existing:
             await interaction.response.send_message("すでにあなたのためのgacha-threadが存在します。", ephemeral=True)
-        else:
-            gacha_thread = await interaction.channel.create_thread(
-                name=f'gacha-thread-{interaction.user.name}',
-                type=discord.ChannelType.private_thread,
-                auto_archive_duration=10080,
-                invitable=False
-            )
-            await gacha_thread.add_user(interaction.user)
-            await gacha_thread.edit(slowmode_delay=10)
-            await gacha_thread.send(
-                f"{interaction.user.mention}\nここはあなた専用のガチャスレッドです。`/gacha`でガチャボタンが表示されます。\n"
-                "それを押すとガチャ結果が表示されます。\n"
-                "**注意：このスレッドからは退出しないでください。**"
-            )
-            await interaction.response.send_message("専用ガチャスレッドを作成しました。", ephemeral=True)
+            return
+
+        # **まず最初に** インタラクションを応答（ephemeral）
+        await interaction.response.send_message("専用ガチャスレッドを作成しました。", ephemeral=True)
+
+        # その後、フォローアップではなく普通の処理としてスレッドを作成
+        gacha_thread = await interaction.channel.create_thread(
+            name=f'gacha-thread-{interaction.user.name}',
+            type=discord.ChannelType.private_thread,
+            auto_archive_duration=10080,  # 1週間
+            invitable=False
+        )
+        await gacha_thread.add_user(interaction.user)
+        await gacha_thread.edit(slowmode_delay=10)
+        await gacha_thread.send(
+            f"{interaction.user.mention}\n"
+            "ここはあなた専用のガチャスレッドです。`/gacha`でガチャボタンが表示されます。\n"
+            "それを押すとガチャ結果が表示されます。\n"
+            "**注意：このスレッドからは退出しないでください。**"
+        )
+        await interaction.response.send_message("専用ガチャスレッドを作成しました。", ephemeral=True)
 
     @app_commands.command(name="artlistnum", description="取得したカードの一覧をNo.順で表示します")
     async def artlist_num(self, interaction: discord.Interaction):

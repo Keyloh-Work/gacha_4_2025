@@ -25,6 +25,9 @@ logger.addHandler(stream_handler)
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='/', intents=intents)
+bot.last_gacha_usage = {}          # ← ここを追加
+bot.daily_auto_points = 3         # 既にある場合は位置を問わず OK
+
 
 # CSV データファイルのパス
 bot.gacha_data_path = 'data/gacha_data.csv'

@@ -137,7 +137,6 @@ class GachaButtonView(discord.ui.View):
             await interaction.followup.send("ポイントが不足しています。", ephemeral=True)
             return
 
-        # ポイント消費
         new_points = points - 1
         await db.set_points(self.bot.db_pool, user_id, new_points)
         remaining_points = new_points
@@ -173,9 +172,6 @@ class GachaButtonView(discord.ui.View):
             return "🎇✨✨🌟💎 UR 💎🌟✨✨🎇"
         return rarity
 
-    async def get_random_url(self, user_id):
-        return await db.get_random_item_from_db(self.bot.db_pool)
-
     async def animate_embed(self, interaction, url_info, remaining_points, is_new):
         message = await interaction.followup.send("ガチャ中…", ephemeral=False)
         await asyncio.sleep(1)
@@ -190,7 +186,7 @@ class GachaButtonView(discord.ui.View):
         embed.add_field(name="レア度", value=url_info['rarity'], inline=True)
         embed.add_field(name="イラストNo.", value=f"No.{url_info['no']}", inline=True)
         if is_new:
-            embed.add_field(name="\u200b", value="✨NEW✨", inline=True)
+            embed.add_field(name="​", value="✨NEW✨", inline=True)
         embed.add_field(name="タイトル", value=url_info['title'], inline=True)
         await message.edit(embed=embed)
         await asyncio.sleep(1)
@@ -236,10 +232,10 @@ class GachaCog(commands.Cog):
                 ephemeral=True
             )
 
-        @app_commands.command(name="creategachathread", description="専用ガチャスレッドを作成します")
-        async def create_gacha_thread(self, interaction: discord.Interaction):
-            if interaction.channel.name != "gacha-channel":
-                await interaction.response.send_message(
+    @app_commands.command(name="creategachathread", description="専用ガチャスレッドを作成します")
+    async def create_gacha_thread(self, interaction: discord.Interaction):
+        if interaction.channel.name != "gacha-channel":
+            await interaction.response.send_message(
                 "このコマンドは専用のガチャチャンネルでのみ使用できます。",
                 ephemeral=True
             )
@@ -256,10 +252,8 @@ class GachaCog(commands.Cog):
             )
             return
 
-        # まず defer で反応のみ返す
         await interaction.response.defer(ephemeral=True)
 
-        # スレッド作成
         gacha_thread = await interaction.channel.create_thread(
             name=f'gacha-thread-{interaction.user.name}',
             type=discord.ChannelType.private_thread,
@@ -275,17 +269,14 @@ class GachaCog(commands.Cog):
             "**注意：このスレッドからは退出しないでください。**"
         )
 
-        # 完了メッセージは followup で送る
         await interaction.followup.send(
             "専用ガチャスレッドを作成しました。",
             ephemeral=True
         )
 
-
     @app_commands.command(name="artlistnum", description="取得したカードの一覧をNo.順で表示します")
     async def artlist_num(self, interaction: discord.Interaction):
         await db.init_db(self.bot.db_pool)  # Ensure DB is initialized (optional)
-        # Ensure user's points exist
         await db.get_points(self.bot.db_pool, interaction.user.id)
         if isinstance(interaction.channel, discord.Thread) and interaction.channel.name.startswith('gacha-thread-'):
             user_id = interaction.user.id

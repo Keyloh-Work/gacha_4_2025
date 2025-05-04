@@ -3,94 +3,81 @@ import sys
 import logging
 import discord
 from discord.ext import commands
-import pytz
-from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 import asyncpg
 import db
 
+# ─── ログ設定 ──────────────────────────────────────
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+fmt = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
 
-# ファイルおよびターミナルへのログ出力の設定
-file_handler = logging.FileHandler('bot.log', encoding='utf-8')
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+fh = logging.FileHandler('bot.log', encoding='utf-8')
+fh.setFormatter(fmt)
+logger.addHandler(fh)
 
-stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
+sh = logging.StreamHandler(sys.stdout)
+sh.setFormatter(fmt)
+logger.addHandler(sh)
 
+# ─── Bot初期化 ─────────────────────────────────────
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='/', intents=intents)
-bot.last_gacha_usage = {}          # ← ここを追加
-bot.daily_auto_points = 3         # 既にある場合は位置を問わず OK
-
-
-# CSV データファイルのパス
-bot.gacha_data_path = 'data/gacha_data.csv'
-
-# Railway の PostgreSQL 用：環境変数から DATABASE_URL を取得
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL is None:
-    raise ValueError("DATABASE_URL environment variable not set")
-
-# タイムゾーンは日本標準時 (JST)
+bot.last_gacha_usage = {}
 scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Tokyo'))
 
+# ─── 起動時処理 ─────────────────────────────────────
 @bot.event
 async def on_ready():
-    logger.info(f"Logged in as {bot.user}!")
-    # DB接続プールを作成
+    logger.info(f'Logged in as {bot.user}!')
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set")
     bot.db_pool = await asyncpg.create_pool(DATABASE_URL)
-    # DBテーブルの初期化
+
+    # テーブル初期化 & 設定初期値投入
     await db.init_db(bot.db_pool)
-    # CSVからガチャデータを読み込み DB にロード（初回のみ）
-    await db.load_gacha_data(bot.db_pool, bot.gacha_data_path)
-    # Cog の読み込み
+
+    # CSV→DBロード（初回／更新時）
+    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_1.csv', 'spring')
+    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_2.csv', 'summer')
+
+    # Cog読み込み
     await bot.load_extension("cogs.gacha")
     await bot.load_extension("cogs.admin")
     await bot.tree.sync()
+
+    # 毎日00:00ジョブ登録
+    scheduler.add_job(
+        lambda: db.add_daily_points_for_all(
+            bot.db_pool,
+            # settingsテーブルから現在の付与ポイントを取得
+            bot.loop.create_task(db.get_daily_auto_points(bot.db_pool))
+        ),
+        'cron', hour=0, minute=0
+    )
     scheduler.start()
     logger.info("Scheduler started.")
 
-# 毎日00:00に自動付与するポイントの上限は 15pt です。
-@scheduler.scheduled_job('cron', hour=0, minute=0)
-async def daily_points_job():
-    await db.add_daily_points(bot.db_pool, bot.daily_auto_points)
-
-# コマンド実行時のパラメータ詳細ログ（アプリケーションコマンド）
+# ─── コマンド利用ログ ―────────────────────────────────
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     if interaction.type == discord.InteractionType.application_command:
-        command_name = interaction.data.get("name", "Unknown")
+        cmd = interaction.data.get("name")
         user = interaction.user
-        options = interaction.data.get("options", [])
-        param_list = []
-        for opt in options:
-            if "resolved" in opt:
-                resolved = opt["resolved"]
-                param_value = None
-                if isinstance(resolved, dict):
-                    if "username" in resolved and "discriminator" in resolved:
-                        param_value = f"{resolved['username']}#{resolved['discriminator']}"
-                    else:
-                        param_value = opt.get("value")
-                else:
-                    param_value = opt.get("value")
-            else:
-                param_value = opt.get("value")
-            param_list.append(f"{opt['name']}={param_value}")
-        params_str = ", ".join(param_list) if param_list else "None"
-        logger.info(f"User {user.name} (ID: {user.id}) used command /{command_name} with parameters: {params_str}")
+        opts = interaction.data.get("options", [])
+        parts = []
+        for o in opts:
+            parts.append(f"{o['name']}={o.get('value')}")
+        logger.info(
+            f"User {user.name} used /{cmd} with parameters: {', '.join(parts) or 'None'}"
+        )
 
-# 初期値: 自動付与ポイントのデフォルトを3に設定
-bot.daily_auto_points = 3
-
-TOKEN = os.getenv("DISCORD_TOKEN")
-if TOKEN is None:
-    raise ValueError("DISCORD_TOKEN environment variable not set")
-
-bot.run(TOKEN)
+# トークン実行
+if __name__ == "__main__":
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    if not TOKEN:
+        raise RuntimeError("DISCORD_TOKEN is not set")
+    bot.run(TOKEN)

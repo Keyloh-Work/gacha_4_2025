@@ -304,31 +304,42 @@ class GachaCog(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=view)
 
-    @app_commands.command(name="artlistch", description="取得カード一覧 (キャラ順)")
+    @app_commands.command(name="artlistch", description="取得したカードをキャラごとにページを分けて表示します")
     @app_commands.describe(gachatype="spring または summer")
     async def artlistch(self, interaction: discord.Interaction, gachatype: str):
-        user = interaction.user.name
+        # スレッド外では弾く
         if not (isinstance(interaction.channel, discord.Thread)
-                and interaction.channel.name.startswith("gacha-thread-")):
+                and interaction.channel.name.startswith('gacha-thread-')):
             return await interaction.response.send_message(
-                "専用スレッド内で実行してください", ephemeral=True
+                "このコマンドは専用のガチャスレッド内でのみ使用できます。", ephemeral=True
             )
-        cards = await db.get_user_cards(self.bot.db_pool, user, gachertype=gachatype)
+
+        user = interaction.user.name
+
+        # ここで "gachatype" を使って取得
+        cards = await db.get_user_cards(self.bot.db_pool, user, gachatype)
+
+        # DBからアイテムを取り出す際も同様に "gachatype" を使用
         async with self.bot.db_pool.acquire() as conn:
             rows = await conn.fetch(
-                f"SELECT no,url,chname,title FROM gacha_items_{gachertype}"
+                f"SELECT no, url, chname, title FROM gacha_items_{gachatype}"
             )
+
+        # キャラ名ごとにグループ化
         grouped = defaultdict(list)
         for r in rows:
             grouped[r["chname"]].append(dict(r))
         grouped_data = sorted(grouped.items(), key=lambda x: x[0])
+
+        # 正しいビューを作成して渡す
         view = ChnamePaginatorView(grouped_data, cards)
         chname, lines = view.build_page_content()
         embed = discord.Embed(
-            title=f"{user} の一覧 (キャラ順／{gachertype}・{chname})",
+            title=f"{user} の一覧 ({gachatype}・{chname})\nPage 1/{view.total_pages}",
             description="\n".join(lines)
         )
         await interaction.response.send_message(embed=embed, view=view)
+
 
 async def setup(bot):
     await bot.add_cog(GachaCog(bot))

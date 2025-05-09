@@ -73,7 +73,7 @@ class ChnamePaginatorView(discord.ui.View):
         self.grouped = grouped_data
         self.collected = collected
         self.index = 0
-        self.total_pages = len(grouped_data)
+        self.total_pages = len(grouped_data)   # ← 追加
         self.max_page = self.total_pages - 1
 
     def build_page_content(self):
@@ -125,37 +125,52 @@ class ChnamePaginatorView(discord.ui.View):
 
 
 class GachaButtonView(discord.ui.View):
-    def __init__(self, bot, username, gachatype):
+    def __init__(self, bot, username, gachatype, display_name):
         super().__init__(timeout=None)
         self.bot = bot
         self.username = username
-        self.gachatype = gachatype
+        self.gachatype = gachatype            # "spring" or "summer"
+        self.display_name = display_name      # Choice.name ("春ガチャ"/"夏ガチャ")
 
     @discord.ui.button(label="ガチャを回す！", style=discord.ButtonStyle.primary)
     async def callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        # 1) 残りポイント更新
         pts = await db.get_points(self.bot.db_pool, self.username)
         if pts <= 0:
-            return await interaction.followup.send("ポイントが不足しています。", ephemeral=True)
-
+            return await interaction.response.send_message(
+                "ポイントが不足しています。", ephemeral=True
+            )
         await db.set_points(self.bot.db_pool, self.username, pts - 1)
         remaining = pts - 1
 
-        await interaction.edit_original_response(
-            content=f"{interaction.data['options'][0]['name']} ガチャ — 残りポイント: {remaining} pt"
+        # ここで元のエフェメラルメッセージを更新
+        await interaction.response.edit_message(
+            content=f"{self.display_name} — 残りポイント: {remaining} pt"
         )
 
+        # 2) ガチャ演出
         url_info = await db.get_random_item(self.bot.db_pool, self.gachatype)
         if url_info is None:
-            return await interaction.followup.send("ガチャデータの読み込みに失敗しました。", ephemeral=True)
+            return await interaction.followup.send(
+                "ガチャデータの読み込みに失敗しました。", ephemeral=True
+            )
 
-        logger.info(f"User {self.username} drew [{self.gachatype}] No.{url_info['no']} / {url_info['title']}")
+        # ログに抽選履歴
+        logger.info(
+            f"User {self.username} drew [{self.gachatype}] No.{url_info['no']} / {url_info['title']}"
+        )
 
-        user_cards = await db.get_user_cards(self.bot.db_pool, self.username, self.gachatype)
+        # 新規判定
+        user_cards = await db.get_user_cards(
+            self.bot.db_pool, self.username, self.gachatype
+        )
         is_new = url_info["no"] not in user_cards
         if is_new:
-            await db.add_card(self.bot.db_pool, self.username, self.gachertype, url_info["no"])
+            await db.add_card(
+                self.bot.db_pool, self.username, self.gachatype, url_info["no"]
+            )
 
+        # 3) アニメーション表示
         await self.animate_embed(interaction, url_info, remaining, is_new)
 
     def add_emoji_to_rarity(self, rarity: str) -> str:
@@ -172,12 +187,13 @@ class GachaButtonView(discord.ui.View):
         return rarity
 
     async def animate_embed(self, interaction, url_info, remaining, is_new):
+        # 「ガチャ中…」フォロワップ
         msg = await interaction.followup.send("ガチャ中…", ephemeral=False)
         await asyncio.sleep(1)
 
         # タイトル
         embed = discord.Embed(
-            title="春ガチャ" if self.gachatype == "spring" else "夏ガチャ"
+            title=self.display_name
         )
         await msg.edit(content=None, embed=embed)
         await asyncio.sleep(1)
@@ -187,7 +203,7 @@ class GachaButtonView(discord.ui.View):
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # レア度
+        # レア度 → 装飾付きに差し替え
         embed.add_field(name="レア度", value="...", inline=True)
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
@@ -196,7 +212,7 @@ class GachaButtonView(discord.ui.View):
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # No.・NEW
+        # No. & NEW
         embed.add_field(name="イラストNo.", value=f"No.{url_info['no']}", inline=True)
         if is_new:
             embed.add_field(name="\u200b", value="✨NEW✨", inline=True)
@@ -208,7 +224,7 @@ class GachaButtonView(discord.ui.View):
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # URL・画像
+        # URL と画像
         embed.add_field(name="URL", value=f"[🔗 Link]({url_info['url']})", inline=False)
         embed.set_image(url=url_info['url'])
         await msg.edit(embed=embed)
@@ -241,25 +257,27 @@ class GachaCog(commands.Cog):
         last = self.bot.last_gacha_usage.get(user, 0)
         if now - last < COOLDOWN:
             return await interaction.response.send_message(
-                f"クールダウン中です：あと{int(COOLDOWN - (now-last))}秒", ephemeral=True
+                f"クールダウン中です：あと{int(COOLDOWN - (now-last))}秒",
+                ephemeral=True
             )
         self.bot.last_gacha_usage[user] = now
 
-        gtype = gachatype.value  # "spring" or "summer"
-        display = gachatype.name  # "春ガチャ" or "夏ガチャ"
+        display = gachatype.name       # e.g. "春ガチャ"
+        gtype = gachatype.value        # "spring" or "summer"
         pts = await db.get_points(self.bot.db_pool, user)
 
-        if not (isinstance(interaction.channel, discord.Thread)
-                and interaction.channel.name.startswith("gacha-thread-")):
+        if not (
+            isinstance(interaction.channel, discord.Thread)
+            and interaction.channel.name.startswith("gacha-thread-")
+        ):
             return await interaction.response.send_message(
                 "専用スレッド内で実行してください", ephemeral=True
             )
 
-        view = GachaButtonView(self.bot, user, gtype)
+        view = GachaButtonView(self.bot, user, gtype, display)
         await interaction.response.send_message(
             f"{display} — 残りポイント: {pts} pt",
-            view=view,
-            ephemeral=True
+            view=view, ephemeral=True
         )
 
     @app_commands.command(name="artlistnum", description="取得カード一覧 (No順)")
@@ -276,14 +294,15 @@ class GachaCog(commands.Cog):
         gachatype: app_commands.Choice[str],
     ):
         user = interaction.user.name
-        if not (isinstance(interaction.channel, discord.Thread)
-                and interaction.channel.name.startswith("gacha-thread-")):
+        if not (
+            isinstance(interaction.channel, discord.Thread)
+            and interaction.channel.name.startswith("gacha-thread-")
+        ):
             return await interaction.response.send_message(
                 "専用スレッド内で実行してください", ephemeral=True
             )
 
         gtype = gachatype.value
-        pts = await db.get_points(self.bot.db_pool, user)
         cards = await db.get_user_cards(self.bot.db_pool, user, gtype)
         async with self.bot.db_pool.acquire() as conn:
             rows = await conn.fetch(
@@ -313,8 +332,10 @@ class GachaCog(commands.Cog):
         gachatype: app_commands.Choice[str],
     ):
         user = interaction.user.name
-        if not (isinstance(interaction.channel, discord.Thread)
-                and interaction.channel.name.startswith("gacha-thread-")):
+        if not (
+            isinstance(interaction.channel, discord.Thread)
+            and interaction.channel.name.startswith("gacha-thread-")
+        ):
             return await interaction.response.send_message(
                 "専用スレッド内で実行してください", ephemeral=True
             )
@@ -338,7 +359,6 @@ class GachaCog(commands.Cog):
             ),
             view=view
         )
-
 
 async def setup(bot):
     await bot.add_cog(GachaCog(bot))

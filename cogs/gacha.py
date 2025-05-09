@@ -66,13 +66,15 @@ class PaginatorView(discord.ui.View):
         self.page = self.max_page
         await self.update(interaction)
 
+
 class ChnamePaginatorView(discord.ui.View):
     def __init__(self, grouped_data, collected):
         super().__init__(timeout=None)
-        self.grouped = grouped_data  # [(chname, [items...]), ...]
+        self.grouped = grouped_data           # [(chname, [items...]), ...]
         self.collected = collected
         self.index = 0
-        self.max_page = len(grouped_data) - 1
+        self.total_pages = len(grouped_data)  # 追加：総ページ数
+        self.max_page = self.total_pages - 1  # 既存の max_page
 
     def build_page_content(self):
         chname, items = self.grouped[self.index]
@@ -94,7 +96,7 @@ class ChnamePaginatorView(discord.ui.View):
     async def update(self, interaction: discord.Interaction):
         chname, lines = self.build_page_content()
         embed = discord.Embed(
-            title=f"{chname} の一覧 (Page {self.index+1}/{self.max_page+1})",
+            title=f"{chname} の一覧 (Page {self.index+1}/{self.total_pages})",
             description="\n".join(lines)
         )
         await interaction.response.edit_message(embed=embed, view=self)
@@ -121,6 +123,7 @@ class ChnamePaginatorView(discord.ui.View):
         self.index = self.max_page
         await self.update(interaction)
 
+
 class GachaButtonView(discord.ui.View):
     def __init__(self, bot, username, gachatype):
         super().__init__(timeout=None)
@@ -135,32 +138,24 @@ class GachaButtonView(discord.ui.View):
         if pts <= 0:
             return await interaction.followup.send("ポイントが不足しています。", ephemeral=True)
 
-        # ポイント消費
         await db.set_points(self.bot.db_pool, self.username, pts - 1)
         remaining = pts - 1
 
-        # ボタン押下直後に残りポイント更新
         await interaction.edit_original_response(
             content=f"{self.gachatype} ガチャ — 残りポイント: {remaining} pt"
         )
 
-        # ランダム抽選
         url_info = await db.get_random_item(self.bot.db_pool, self.gachatype)
         if url_info is None:
             return await interaction.followup.send("ガチャデータの読み込みに失敗しました。", ephemeral=True)
 
-        # 抽選履歴ログ
-        logger.info(
-            f"User {self.username} drew [{self.gachatype}] No.{url_info['no']} / {url_info['title']}"
-        )
+        logger.info(f"User {self.username} drew [{self.gachatype}] No.{url_info['no']} / {url_info['title']}")
 
-        # 新規判定＆保存
         user_cards = await db.get_user_cards(self.bot.db_pool, self.username, self.gachatype)
         is_new = url_info["no"] not in user_cards
         if is_new:
             await db.add_card(self.bot.db_pool, self.username, self.gachatype, url_info["no"])
 
-        # アニメーション表示
         await self.animate_embed(interaction, url_info, remaining, is_new)
 
     def add_emoji_to_rarity(self, rarity: str) -> str:
@@ -177,22 +172,18 @@ class GachaButtonView(discord.ui.View):
         return rarity
 
     async def animate_embed(self, interaction, url_info, remaining, is_new):
-        # 1) 「ガチャ中…」
         msg = await interaction.followup.send("ガチャ中…", ephemeral=False)
         await asyncio.sleep(1)
 
-        # 2) タイトル表示
         title = "春のガチャ" if self.gachatype == "spring" else "夏のガチャ"
         embed = discord.Embed(title=title)
         await msg.edit(content=None, embed=embed)
         await asyncio.sleep(1)
 
-        # 3) キャラ
         embed.add_field(name="キャラ", value=url_info['chname'], inline=True)
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # 4) レア度を「...」→装飾付きに更新
         embed.add_field(name="レア度", value="...", inline=True)
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
@@ -201,27 +192,24 @@ class GachaButtonView(discord.ui.View):
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # 5) No.・NEW
         embed.add_field(name="イラストNo.", value=f"No.{url_info['no']}", inline=True)
         if is_new:
             embed.add_field(name="\u200b", value="✨NEW✨", inline=True)
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # 6) タイトル
         embed.add_field(name="タイトル", value=url_info['title'], inline=True)
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # 7) URL と画像
         embed.add_field(name="URL", value=f"[🔗 Link]({url_info['url']})", inline=False)
         embed.set_image(url=url_info['url'])
         await msg.edit(embed=embed)
         await asyncio.sleep(1)
 
-        # 8) 残りポイント
         embed.add_field(name="残りポイント", value=f"**{remaining} pt**", inline=False)
         await msg.edit(embed=embed)
+
 
 class GachaCog(commands.Cog):
     def __init__(self, bot):
@@ -316,10 +304,10 @@ class GachaCog(commands.Cog):
 
         user = interaction.user.name
 
-        # ここで "gachatype" を使って取得
+        # ガチャ種別に応じてユーザーの取得カードを取得
         cards = await db.get_user_cards(self.bot.db_pool, user, gachatype)
 
-        # DBからアイテムを取り出す際も同様に "gachatype" を使用
+        # DBからアイテムを取り出す
         async with self.bot.db_pool.acquire() as conn:
             rows = await conn.fetch(
                 f"SELECT no, url, chname, title FROM gacha_items_{gachatype}"
@@ -331,7 +319,7 @@ class GachaCog(commands.Cog):
             grouped[r["chname"]].append(dict(r))
         grouped_data = sorted(grouped.items(), key=lambda x: x[0])
 
-        # 正しいビューを作成して渡す
+        # ページネーションビューを生成
         view = ChnamePaginatorView(grouped_data, cards)
         chname, lines = view.build_page_content()
         embed = discord.Embed(
@@ -339,7 +327,6 @@ class GachaCog(commands.Cog):
             description="\n".join(lines)
         )
         await interaction.response.send_message(embed=embed, view=view)
-
 
 async def setup(bot):
     await bot.add_cog(GachaCog(bot))

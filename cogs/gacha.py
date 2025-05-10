@@ -239,6 +239,51 @@ class GachaCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @app_commands.command(
+    name="creategachathread",
+    description="専用ガチャスレッドを作成します"
+    )
+    async def creategachathread(self, interaction: discord.Interaction):
+        # 実行可能チャンネルチェック
+        if interaction.channel.name != "gacha-channel":
+            return await interaction.response.send_message(
+                "このコマンドは gacha-channel 内でのみ実行できます。",
+                ephemeral=True
+            )
+        # すでにスレッドがあるか確認
+        existing = discord.utils.get(
+            interaction.channel.threads,
+            name=f"gacha-thread-{interaction.user.name}"
+        )
+        if existing:
+            return await interaction.response.send_message(
+                "あなた専用のガチャスレッドは既に存在します。",
+                ephemeral=True
+            )
+        # Interaction を defer してからスレッド作成
+        await interaction.response.defer(ephemeral=True)
+        thread = await interaction.channel.create_thread(
+            name=f"gacha-thread-{interaction.user.name}",
+            type=discord.ChannelType.private_thread,
+            auto_archive_duration=10080,  # 1週間
+            invitable=False               # 招待不可
+        )
+        await thread.add_user(interaction.user)
+        await thread.edit(slowmode_delay=10)
+        await thread.send(
+            f"{interaction.user.mention} さんの専用ガチャスレッドです。\n"
+            "`/gacha spring` または `/gacha summer` を実行すると\n"
+            "ガチャボタンが表示されます。\n"
+            "**このスレッドから退出しないでください。**"
+        )
+
+        # 完了メッセージ（フォローアップ）
+        await interaction.followup.send(
+            "専用ガチャスレッドを作成しました！",
+            ephemeral=True
+        )
+
+    
     @app_commands.command(name="gacha", description="ガチャを回します")
     @app_commands.choices(
         gachatype=[
@@ -260,7 +305,8 @@ class GachaCog(commands.Cog):
                 f"クールダウン中です：あと{int(COOLDOWN - (now-last))}秒",
                 ephemeral=True
             )
-        self.bot.last_gacha_usage[user] = now
+            return
+        self.bot.last_gacha_usage[user_id] = now
 
         display = gachatype.name       # e.g. "春ガチャ"
         gtype = gachatype.value        # "spring" or "summer"

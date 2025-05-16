@@ -220,8 +220,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="gacha", description="ガチャを回します")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024", value="summer"),
+            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
+            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
         ]
     )
     @app_commands.describe(gachatype="回すガチャを選択してください")
@@ -288,14 +288,26 @@ class GachaCog(commands.Cog):
         await th.send(
             f"{interaction.user.mention} の専用ガチャスレッドです。\n"
             "`/gachaでガチャを回せます。"
+            "ボタンを連打するとエラーが発生しやすくなるので再度回す際は５秒ほど置いてご利用ください。\n"
+            "ガチャポイントは全てのガチャで共通です。\n"
+            "ポイントは最大１５ポイントまで保持できます。それ以上は増えません。\n"
+            "\n"
+            "コマンドの詳しい使用方法は「使い方」チャンネルをご確認ください。\n"
+
+            "You can roll the gacha using the /gacha command.\n"
+            "Please wait about 5 seconds before rolling again, as rapidly pressing the button may cause errors.\n"
+            "Gacha points are shared across all gacha types.\n"
+            "You can hold up to 15 points — any points beyond this limit will not accumulate.\n"
+            "\n"
+            "For detailed instructions on how to use the commands, please refer to the [How to Use] channel."
         )
         await interaction.followup.send("専用ガチャスレッドを作成しました。", ephemeral=True)
 
     @app_commands.command(name="artlistnum", description="取得カード一覧 (No順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024", value="summer"),
+            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
+            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")
@@ -332,8 +344,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistch", description="取得カード一覧 (キャラ順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024", value="summer"),
+            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
+            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")

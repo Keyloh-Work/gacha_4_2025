@@ -88,9 +88,9 @@ async def get_points(pool: asyncpg.Pool, username: str) -> int:
         if v is None:
             await conn.execute(
                 "INSERT INTO user_points(username, points) VALUES($1, $2)",
-                username, 10
+                username, 15
             )
-            return 10
+            return 15
         return v
 
 async def set_points(pool: asyncpg.Pool, username: str, pts: int):

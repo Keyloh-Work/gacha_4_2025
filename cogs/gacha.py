@@ -220,8 +220,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="gacha", description="ガチャを回します")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )
     @app_commands.describe(gachatype="回すガチャを選択してください")
@@ -287,7 +287,7 @@ class GachaCog(commands.Cog):
         await th.edit(slowmode_delay=10)
         await th.send(
             f"{interaction.user.mention} の専用ガチャスレッドです。\n"
-            "`/gachaでガチャを回せます。"
+            "/gachaでガチャを回せます。"
             "ボタンを連打するとエラーが発生しやすくなるので再度回す際は５秒ほど置いてご利用ください。\n"
             "ガチャポイントは全てのガチャで共通です。\n"
             "ポイントは最大１５ポイントまで保持できます。それ以上は増えません。\n"
@@ -306,8 +306,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistnum", description="取得カード一覧 (No順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")
@@ -344,8 +344,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistch", description="取得カード一覧 (キャラ順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="新春ガチャ-Spring Gacha", value="spring"),
-            app_commands.Choice(name="夏休みガチャ2024-Summer Gacha 2024", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")

@@ -42,7 +42,7 @@ async def on_ready():
     await db.init_db(bot.db_pool)
 
     # CSV→DBロード（spring / summer）
-    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_1.csv', 'summer')
+    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_1.csv', 'summer_2025')
     await db.load_gacha_data(bot.db_pool, 'data/gacha_data_2.csv', 'halloween')
 
     # Cog の読み込み

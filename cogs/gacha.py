@@ -220,7 +220,7 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="gacha", description="ガチャを回します")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
             app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )
@@ -306,7 +306,7 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistnum", description="取得カード一覧 (No順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
             app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )
@@ -344,7 +344,7 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistch", description="取得カード一覧 (キャラ順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
             app_commands.Choice(name="ハロウィンガチャ2024-Halloween Gacha 2024", value="halloween"),
         ]
     )

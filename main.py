@@ -42,8 +42,8 @@ async def on_ready():
     await db.init_db(bot.db_pool)
 
     # CSV→DBロード（spring / summer）
-    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_1.csv', 'summer_2025')
-    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_2.csv', 'halloween')
+    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_1.csv', 'autumn_2025')
+    await db.load_gacha_data(bot.db_pool, 'data/gacha_data_2.csv', 'christmas_2024')
 
     # Cog の読み込み
     await bot.load_extension("cogs.gacha")

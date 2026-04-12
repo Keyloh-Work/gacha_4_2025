@@ -220,8 +220,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="gacha", description="ガチャを回します")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="クリスマスガチャ2025-Christmas Gacha 2025", value="christmas_2025"),
-            app_commands.Choice(name="新春ガチャガチャ2025-New Year Gacha Gacha 2025", value="spring_2025"),
+            app_commands.Choice(name="新春ガチャ2026-Spring Gacha 2026", value="spring_2026"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
         ]
     )
     @app_commands.describe(gachatype="回すガチャを選択してください")
@@ -306,8 +306,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistnum", description="取得カード一覧 (No順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="クリスマスガチャ2025-Christmas Gacha 2025", value="christmas_2025"),
-            app_commands.Choice(name="新春ガチャガチャ2025-New Year Gacha Gacha 2025", value="spring_2025"),
+            app_commands.Choice(name="新春ガチャ2026-Spring Gacha 2026", value="spring_2026"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")
@@ -344,8 +344,8 @@ class GachaCog(commands.Cog):
     @app_commands.command(name="artlistch", description="取得カード一覧 (キャラ順)")
     @app_commands.choices(
         gachatype=[
-            app_commands.Choice(name="クリスマスガチャ2025-Christmas Gacha 2025", value="christmas_2025"),
-            app_commands.Choice(name="新春ガチャガチャ2025-New Year Gacha Gacha 2025", value="spring_2025"),
+            app_commands.Choice(name="新春ガチャ2026-Spring Gacha 2026", value="spring_2026"),
+            app_commands.Choice(name="夏休みガチャ2025-Summer Gacha 2025", value="summer_2025"),
         ]
     )
     @app_commands.describe(gachatype="表示するガチャを選択してください")

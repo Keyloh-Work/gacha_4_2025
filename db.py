@@ -26,7 +26,7 @@ async def init_db(pool: asyncpg.Pool):
         );
         """)
         # ガチャアイテム(spring & summer)
-        for gt in ("christmas_2025","spring_2025"):
+        for gt in ("spring_2026","summer_2025_2"):
             await conn.execute(f"""
             CREATE TABLE IF NOT EXISTS gacha_items_{gt} (
               no     TEXT PRIMARY KEY,
